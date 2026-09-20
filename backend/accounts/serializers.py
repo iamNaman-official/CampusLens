@@ -50,17 +50,24 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    email_verified = serializers.BooleanField(
+        source="profile.email_verified",
+        read_only=True,
+    )
+
     class Meta:
         model = User
         fields = [
             "id",
             "username",
             "email",
+            "email_verified",
         ]
         read_only_fields = [
             "id",
             "username",
             "email",
+            "email_verified",
         ]
 
 
