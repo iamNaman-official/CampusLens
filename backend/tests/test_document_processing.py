@@ -93,7 +93,7 @@ def test_process_document_persists_extracted_data(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "documents.services.document_processor.extract_document_intelligence",
+        "documents.services.document_processor.generate_document_intelligence",
         mock_extract_document_intelligence,
     )
 

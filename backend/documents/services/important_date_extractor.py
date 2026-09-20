@@ -6,7 +6,6 @@ from documents.models import Document
 from documents.services.deadline_extractor import extract_deadlines
 from documents.services.retriever import retrieve_chunks
 
-
 IMPORTANT_DATE_QUERY = """
 date dates schedule scheduled available release announcement
 exam examination admit card result result announcement

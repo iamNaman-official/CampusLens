@@ -5,7 +5,6 @@ from documents.agent.agent import create_agent
 from documents.models import Document
 from documents.services.retriever import retrieve_chunks
 
-
 ACTION_QUERY = """
 must submit required submit upload pay register apply complete
 provide attach fill sign attend respond renew download collect

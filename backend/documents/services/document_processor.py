@@ -9,7 +9,7 @@ from documents.models import (
 )
 from documents.services.chunking import chunk_text
 from documents.services.document_intelligence import (
-    extract_document_intelligence,
+    generate_document_intelligence,
 )
 from documents.services.pdf_processor import (
     PDFProcessingError,
@@ -103,7 +103,7 @@ def process_document(document):
         # with one unified extraction call.
         # -----------------------------------------------------
 
-        intelligence = extract_document_intelligence(
+        intelligence = generate_document_intelligence(
             document,
         )
 

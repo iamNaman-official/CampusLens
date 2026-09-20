@@ -8,7 +8,6 @@ from django.utils import timezone
 
 from accounts.models import EmailOTP
 
-
 OTP_EXPIRY_MINUTES = 5
 MAX_OTP_ATTEMPTS = 5
 RESEND_COOLDOWN_SECONDS = 60

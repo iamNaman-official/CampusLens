@@ -4,7 +4,6 @@ from django.urls import include, path
 from .admin_views import LogDownloadView
 from .views import HealthCheckView
 
-
 urlpatterns = [
     path(
         "admin/",

@@ -1,10 +1,9 @@
 import json
 import re
 
+from documents.agent.agent import create_agent
 from documents.models import Document
 from documents.services.retriever import retrieve_chunks
-from documents.agent.agent import create_agent
-
 
 DEADLINE_QUERY = """
 deadline due by submit by last date application deadline
