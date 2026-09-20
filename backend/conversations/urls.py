@@ -4,6 +4,7 @@ from .views import (
     ChatDetailView,
     ChatMessageListView,
     DocumentChatListView,
+    MessageDetailView,
 )
 
 urlpatterns = [
@@ -22,4 +23,5 @@ urlpatterns = [
         ChatMessageListView.as_view(),
         name="chat-messages",
     ),
+    path("messages/<int:pk>/", MessageDetailView.as_view(), name="message-detail"),
 ]

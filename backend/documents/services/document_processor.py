@@ -1,4 +1,5 @@
 from django.db import transaction
+import logging
 
 from documents.models import (
     Action,
@@ -7,6 +8,9 @@ from documents.models import (
     DocumentPage,
     ImportantDate,
 )
+
+
+logger = logging.getLogger("campuslens.documents")
 from documents.services.chunking import chunk_text
 from documents.services.document_intelligence import (
     extract_document_intelligence,
@@ -103,9 +107,19 @@ def process_document(document):
         # with one unified extraction call.
         # -----------------------------------------------------
 
-        intelligence = extract_document_intelligence(
-            document,
-        )
+        try:
+            intelligence = extract_document_intelligence(document)
+        except Exception:
+            # A local AI service is optional for uploading and reading PDFs.
+            # Keep the extracted text available when that service or its model
+            # is offline, and record empty structured insights instead.
+            logger.exception(
+                "Document intelligence extraction failed for document %s; continuing without insights.",
+                document.pk,
+            )
+            document.status = document.Status.FAILED
+            document.save(update_fields=["status", "updated_at"])
+            return
 
         deadlines = intelligence["deadlines"]
         important_dates = intelligence["important_dates"]
