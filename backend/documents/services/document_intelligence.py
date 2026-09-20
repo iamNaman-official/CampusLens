@@ -2,8 +2,7 @@ import json
 import re
 
 from documents.agent.agent import create_agent
-from documents.models import Document
-from documents.services.retriever import retrieve_chunks
+from documents.models import Document, DocumentChunk
 
 DOCUMENT_INTELLIGENCE_QUERY = """
 Analyze the uploaded student document and extract:
@@ -191,28 +190,31 @@ def generate_document_intelligence(
         document: Document,
 ) -> dict:
     """
-    Generate structured intelligence from a document using the
-    CampusLens agent and retrieved document chunks.
+    Generate structured intelligence from the complete document
+    using the CampusLens agent.
     """
 
-    chunks = retrieve_chunks(
-        document=document,
-        query=DOCUMENT_INTELLIGENCE_QUERY,
-        top_k=10,
-        min_score=0.0,
-    )
-
-    if not chunks:
-        raise ValueError(
-            "No document content was available for intelligence extraction."
+    chunks = (
+        DocumentChunk.objects
+        .filter(page__document=document)
+        .select_related("page")
+        .order_by(
+            "page__page_number",
+            "chunk_index",
         )
+    )
 
     context_parts = []
 
     for chunk in chunks:
         context_parts.append(
-            f"[Page {chunk['page_number']}]\n"
-            f"{chunk['text']}"
+            f"[Page {chunk.page.page_number}]\n"
+            f"{chunk.text}"
+        )
+
+    if not context_parts:
+        raise ValueError(
+            "No document content was available for intelligence extraction."
         )
 
     context = "\n\n".join(context_parts)

@@ -30,14 +30,10 @@ def generate_chat_response(
 
     history = "\n".join(history_parts)
 
+    # Use only the current question for document retrieval.
+    # Conversation history is still passed to the LLM below
+    # so that follow-up questions can be understood.
     retrieval_query = user_message
-
-    if history:
-        recent_history = history_parts[-6:]
-        retrieval_query = (
-                "\n".join(recent_history)
-                + f"\nStudent's current question: {user_message}"
-        )
 
     retrieved_chunks = retrieve_chunks(
         document=document,
@@ -195,6 +191,44 @@ RULES:
     If the student uses words such as "which one", "that", "it",
     "when", "where", or "the first one", resolve the reference
     using the previous conversation before answering.
+    
+17. TABLE AND TIMETABLE INTERPRETATION:
+
+When a timetable contains weekday headers in this order:
+
+MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY | SATURDAY
+
+and PDF extraction has flattened the table into plain text, reconstruct
+the row using that exact column order.
+
+For each time slot:
+- the first schedule entry belongs to MONDAY
+- the second belongs to TUESDAY
+- the third belongs to WEDNESDAY
+- the fourth belongs to THURSDAY
+- the fifth belongs to FRIDAY
+- the sixth belongs to SATURDAY
+
+Do not reject a timetable question merely because the PDF text
+does not preserve visual column boundaries.
+
+If the student asks about MONDAY, inspect the first schedule
+entry for each time slot.
+
+If a schedule entry contains a subject, teacher, and room,
+extract those values from that entry.
+
+For example, if an entry is:
+
+3AIML4: JP: (SW): NB-514
+
+interpret:
+Subject: JP
+Teacher: SW
+Room: NB-514
+
+Only report information that is actually present in the extracted
+document text.
 
 Answer the student's current question.
 """
