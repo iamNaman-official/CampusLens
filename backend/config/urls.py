@@ -5,7 +5,6 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .admin_views import LogDownloadView
 from .views import HealthCheckView
 
-
 urlpatterns = [
     path(
         "admin/",

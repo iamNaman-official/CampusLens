@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,6 +14,8 @@ from .serializers import (
     MessageSerializer,
 )
 from .services.chat_service import generate_chat_response
+
+logger = logging.getLogger("campuslens")
 
 
 class DocumentChatListView(APIView):
@@ -178,6 +182,12 @@ class ChatMessageListView(APIView):
                 user_message=user_content,
             )
         except Exception:
+            logger.exception(
+                "AI response generation failed for chat_id=%s, user_id=%s",
+                chat.id,
+                request.user.id,
+            )
+
             return Response(
                 {
                     "detail": (

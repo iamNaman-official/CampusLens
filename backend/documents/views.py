@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -10,6 +12,8 @@ from .serializers import (
 )
 from .services.document_processor import process_document
 from .services.insights import generate_document_insights
+
+logger = logging.getLogger("campuslens")
 
 
 class DocumentListView(APIView):
@@ -38,6 +42,11 @@ class DocumentListView(APIView):
             try:
                 process_document(document)
             except Exception:
+                logger.exception(
+                    "Document processing failed for document_id=%s",
+                    document.id,
+                )
+
                 return Response(
                     {
                         "detail": (

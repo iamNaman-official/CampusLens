@@ -1,5 +1,6 @@
-from django.db import transaction
 import logging
+
+from django.db import transaction
 
 from documents.models import (
     Action,
@@ -9,11 +10,11 @@ from documents.models import (
     ImportantDate,
 )
 
-
 logger = logging.getLogger("campuslens.documents")
+
 from documents.services.chunking import chunk_text
 from documents.services.document_intelligence import (
-    extract_document_intelligence,
+    generate_document_intelligence,
 )
 from documents.services.pdf_processor import (
     PDFProcessingError,
@@ -108,13 +109,12 @@ def process_document(document):
         # -----------------------------------------------------
 
         try:
-            intelligence = extract_document_intelligence(document)
+            intelligence = generate_document_intelligence(document)
         except Exception:
-            # A local AI service is optional for uploading and reading PDFs.
-            # Keep the extracted text available when that service or its model
-            # is offline, and record empty structured insights instead.
+            # Preserve extracted PDF content when the optional AI service is
+            # unavailable, but never claim that intelligence was extracted.
             logger.exception(
-                "Document intelligence extraction failed for document %s; continuing without insights.",
+                "Document intelligence extraction failed for document %s.",
                 document.pk,
             )
             document.status = document.Status.FAILED

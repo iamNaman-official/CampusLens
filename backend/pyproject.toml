@@ -1,0 +1,9 @@
+[tool.ruff]
+exclude = [
+    "*/migrations/*.py",
+]
+
+[tool.ruff.lint]
+ignore = [
+    "RUF012",
+]

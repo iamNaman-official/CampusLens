@@ -1,153 +1,78 @@
 import json
+import re
 
 from documents.agent.agent import create_agent
-from documents.models import Document, DocumentChunk
+from documents.models import Document
+from documents.services.retriever import retrieve_chunks
 
+DOCUMENT_INTELLIGENCE_QUERY = """
+Analyze the uploaded student document and extract:
 
-def extract_document_intelligence(document: Document) -> dict:
-    """
-    Extract deadlines, important dates, and required actions
-    using a single LLM call.
+1. Deadlines
+2. Important dates
+3. Required actions for students
 
-    The LLM only extracts information from the stored document
-    chunks. Python validates the returned structure and page numbers
-    before the data is persisted.
-    """
+Return ONLY valid JSON in this exact structure:
 
-    chunks = (
-        DocumentChunk.objects
-        .filter(page__document=document)
-        .select_related("page")
-        .order_by(
-            "page__page_number",
-            "chunk_index",
-        )
-    )
-
-    context_parts = []
-
-    for index, chunk in enumerate(chunks, start=1):
-        context_parts.append(
-            f"""
-CONTEXT {index}
-PAGE: {chunk.page.page_number}
-
-TEXT:
-{chunk.text}
-"""
-        )
-
-    if not context_parts:
-        return {
-            "deadlines": [],
-            "important_dates": [],
-            "actions": [],
-        }
-
-    document_context = "\n".join(context_parts)
-
-    agent = create_agent()
-
-    prompt = f"""
-You are CampusLens, an AI document intelligence extractor.
-
-Analyze the supplied document context and extract three categories:
-
-1. DEADLINES
-
-A deadline is a date by which the document explicitly requires
-something to be completed.
-
-2. REQUIRED ACTIONS
-
-An action is something the student is explicitly required to do.
-
-3. IMPORTANT DATES
-
-A date that is relevant to the student but is not itself a
-required action or deadline.
-
-DOCUMENT:
-{document.title}
-
-DOCUMENT CONTEXT:
-{document_context}
-
-STRICT RULES:
-
-1. Extract information ONLY from the supplied document context.
-
-2. Do not invent information.
-
-3. Do not infer an action from an informational statement.
-
-4. Do not turn an announcement date, availability date,
-exam date, or other informational date into a student action
-unless the document explicitly requires that action.
-
-5. Every extracted item MUST use the page number where the
-information appears.
-
-6. A required action should only be included when the document
-explicitly requires the student to perform it.
-
-7. A deadline should only be included when the document
-explicitly associates the date with a requirement or task.
-
-8. If an item does not exist, return an empty array.
-
-9. Avoid duplicates.
-
-10. Keep descriptions concise and faithful to the document.
-
-11. Return ONLY valid JSON.
-
-Return exactly this structure:
-
-{{
+{
     "deadlines": [
-        {{
+        {
             "date": "string",
             "description": "string",
-            "page": 1
-        }}
+            "page": number
+        }
     ],
     "important_dates": [
-        {{
+        {
             "date": "string",
             "description": "string",
-            "page": 1
-        }}
+            "page": number
+        }
     ],
     "actions": [
-        {{
+        {
             "action": "string",
-            "page": 1
-        }}
+            "page": number
+        }
     ]
-}}
+}
+
+Rules:
+- Only extract information supported by the document.
+- Do not invent dates, actions, or page numbers.
+- Page numbers must correspond to the provided document content.
+- A deadline should represent a date by which a required action must be completed.
+- Important dates are relevant dates that are not necessarily deadlines.
+- Actions should represent things the student is explicitly required or instructed to do.
+- If nothing is found for a category, return an empty list.
+- Return JSON only.
 """
 
-    response = agent(prompt)
 
-    raw_response = str(response).strip()
+def _extract_json(raw_response: str) -> dict:
+    """
+    Extract and validate JSON returned by the LLM.
+    """
 
     if not raw_response:
         raise ValueError(
             "LLM returned an empty response for document intelligence."
         )
 
-    # Handle accidental Markdown JSON fences.
-    if raw_response.startswith("```"):
-        lines = raw_response.splitlines()
+    raw_response = raw_response.strip()
 
-        if lines and lines[0].strip().startswith("```"):
-            lines = lines[1:]
-
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-
-        raw_response = "\n".join(lines).strip()
+    # Remove markdown code fences if the model included them.
+    raw_response = re.sub(
+        r"^```(?:json)?\s*",
+        "",
+        raw_response,
+        flags=re.IGNORECASE,
+    )
+    raw_response = re.sub(
+        r"\s*```$",
+        "",
+        raw_response,
+    )
 
     try:
         result = json.loads(raw_response)
@@ -157,7 +82,7 @@ Return exactly this structure:
         ) from exc
 
     if not isinstance(result, dict):
-        raise ValueError(
+        raise TypeError(
             "Document intelligence response must be a JSON object."
         )
 
@@ -166,28 +91,43 @@ Return exactly this structure:
     actions = result.get("actions", [])
 
     if not isinstance(deadlines, list):
-        raise ValueError("deadlines must be a list.")
+        raise TypeError("deadlines must be a list.")
 
     if not isinstance(important_dates, list):
-        raise ValueError("important_dates must be a list.")
+        raise TypeError("important_dates must be a list.")
 
     if not isinstance(actions, list):
-        raise ValueError("actions must be a list.")
+        raise TypeError("actions must be a list.")
 
-    # Validate that every LLM-generated page number actually exists
-    # in this document.
+    return {
+        "deadlines": deadlines,
+        "important_dates": important_dates,
+        "actions": actions,
+    }
+
+
+def validate_document_intelligence(
+        result: dict,
+        document: Document,
+) -> dict:
+    """
+    Validate the structure and page references returned by the LLM.
+    """
+
+    deadlines = result.get("deadlines", [])
+    important_dates = result.get("important_dates", [])
+    actions = result.get("actions", [])
+
     valid_pages = set(
-        DocumentChunk.objects
-        .filter(page__document=document)
-        .values_list(
-            "page__page_number",
+        document.pages.values_list(
+            "page_number",
             flat=True,
         )
     )
 
     for deadline in deadlines:
         if not isinstance(deadline, dict):
-            raise ValueError(
+            raise TypeError(
                 "Each deadline must be an object."
             )
 
@@ -208,7 +148,7 @@ Return exactly this structure:
 
     for important_date in important_dates:
         if not isinstance(important_date, dict):
-            raise ValueError(
+            raise TypeError(
                 "Each important date must be an object."
             )
 
@@ -230,7 +170,7 @@ Return exactly this structure:
 
     for action in actions:
         if not isinstance(action, dict):
-            raise ValueError(
+            raise TypeError(
                 "Each action must be an object."
             )
 
@@ -244,8 +184,55 @@ Return exactly this structure:
                 "Action is missing its description."
             )
 
-    return {
-        "deadlines": deadlines,
-        "important_dates": important_dates,
-        "actions": actions,
-    }
+    return result
+
+
+def generate_document_intelligence(
+        document: Document,
+) -> dict:
+    """
+    Generate structured intelligence from a document using the
+    CampusLens agent and retrieved document chunks.
+    """
+
+    chunks = retrieve_chunks(
+        document=document,
+        query=DOCUMENT_INTELLIGENCE_QUERY,
+        top_k=10,
+        min_score=0.0,
+    )
+
+    if not chunks:
+        raise ValueError(
+            "No document content was available for intelligence extraction."
+        )
+
+    context_parts = []
+
+    for chunk in chunks:
+        context_parts.append(
+            f"[Page {chunk['page_number']}]\n"
+            f"{chunk['text']}"
+        )
+
+    context = "\n\n".join(context_parts)
+
+    prompt = f"""
+{DOCUMENT_INTELLIGENCE_QUERY}
+
+DOCUMENT CONTENT:
+
+{context}
+"""
+
+    agent = create_agent()
+    response = agent(prompt)
+
+    raw_response = str(response)
+
+    result = _extract_json(raw_response)
+
+    return validate_document_intelligence(
+        result=result,
+        document=document,
+    )

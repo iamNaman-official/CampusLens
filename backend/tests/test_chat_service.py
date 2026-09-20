@@ -2,8 +2,8 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from documents.models import Document
 from conversations.models import Chat, Message
+from documents.models import Document
 
 
 @pytest.fixture

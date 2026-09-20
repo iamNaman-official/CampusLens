@@ -93,7 +93,7 @@ def test_process_document_persists_extracted_data(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "documents.services.document_processor.extract_document_intelligence",
+        "documents.services.document_processor.generate_document_intelligence",
         mock_extract_document_intelligence,
     )
 
@@ -203,7 +203,7 @@ def test_process_document_keeps_pdf_when_ai_is_unavailable(monkeypatch):
         lambda _: [{"page_number": 1, "text": "Campus notice"}],
     )
     monkeypatch.setattr(
-        "documents.services.document_processor.extract_document_intelligence",
+        "documents.services.document_processor.generate_document_intelligence",
         lambda _: (_ for _ in ()).throw(ConnectionError("Ollama is offline")),
     )
 

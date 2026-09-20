@@ -3,7 +3,6 @@ from strands.models.ollama import OllamaModel
 
 from documents.agent.tools import search_document
 
-
 SYSTEM_PROMPT = """
 You are CampusLens, an AI document understanding assistant for students.
 

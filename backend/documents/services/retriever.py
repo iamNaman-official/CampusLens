@@ -2,7 +2,6 @@ import re
 
 from documents.models import Document, DocumentChunk
 
-
 STOP_WORDS = {
     "the",
     "a",

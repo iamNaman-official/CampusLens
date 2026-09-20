@@ -35,7 +35,7 @@ def test_user_only_sees_own_documents():
         password="TestPassword123!",
     )
 
-    user2 = User.objects.create_user(
+    User.objects.create_user(
         username="student2",
         password="TestPassword123!",
     )

@@ -15,14 +15,14 @@ from .serializers import (
     UserSerializer,
     VerifyOTPSerializer,
 )
-from .services.password_reset import (
-    confirm_password_reset,
-    request_password_reset,
-)
 from .services.email_otp import (
     resend_email_otp,
     send_email_otp,
     verify_email_otp,
+)
+from .services.password_reset import (
+    confirm_password_reset,
+    request_password_reset,
 )
 
 

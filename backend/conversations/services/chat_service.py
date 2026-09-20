@@ -1,6 +1,6 @@
 from conversations.models import Chat, Message
-from documents.services.retriever import retrieve_chunks
 from documents.agent.agent import create_agent
+from documents.services.retriever import retrieve_chunks
 
 
 def generate_chat_response(

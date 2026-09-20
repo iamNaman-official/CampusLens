@@ -6,7 +6,6 @@ from django.http import FileResponse, Http404
 from rest_framework.permissions import IsAdminUser
 from rest_framework.views import APIView
 
-
 logger = logging.getLogger("campuslens")
 
 

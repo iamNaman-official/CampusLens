@@ -11,7 +11,6 @@ django.setup()
 
 from documents.agent.agent import create_agent
 
-
 agent = create_agent()
 
 document_id = 5

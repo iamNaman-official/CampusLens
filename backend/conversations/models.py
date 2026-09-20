@@ -1,6 +1,8 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
+
 from documents.models import Document
+
 # Create your models here.
 
 class Chat(models.Model):
