@@ -75,7 +75,7 @@ def create_model():
 
     return OllamaModel(
         host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
-        model_id=os.getenv("OLLAMA_MODEL_ID", "qwen3:4b"),
+        model_id=os.getenv("OLLAMA_MODEL_ID", "qwen3.5:9b"),
         additional_args={"think": think},
     )
 

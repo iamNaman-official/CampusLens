@@ -25,10 +25,10 @@ workflow above.
 - Python 3.14+
 - Node.js 20+
 - Ollama
-- The local `qwen3:4b` model (or another model set in `OLLAMA_MODEL_ID`)
+- The local `qwen3.5:9b` model (or another model set in `OLLAMA_MODEL_ID`)
 
 ```powershell
-ollama pull qwen3:4b
+ollama pull qwen3.5:9b
 ```
 
 This machine runs Ollama on CPU. Keep prompts short, preload the model before
@@ -53,7 +53,7 @@ DEBUG=True
 USE_POSTGRES=False
 USE_S3=False
 AI_MODEL_PROVIDER=ollama
-OLLAMA_MODEL_ID=qwen3:4b
+OLLAMA_MODEL_ID=qwen3.5:9b
 OLLAMA_THINK=False
 ```
 

@@ -28,7 +28,7 @@ inventing an answer.
 - SQLite and local development media storage
 - pypdf text extraction, chunking, and keyword retrieval
 - Strands Agents SDK
-- Ollama with `qwen3:4b` locally
+- Ollama with `qwen3.5:9b` locally
 
 ## How it works
 

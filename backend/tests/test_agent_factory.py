@@ -11,13 +11,14 @@ def test_create_model_defaults_to_configurable_ollama(monkeypatch):
             captured.update(kwargs)
 
     monkeypatch.delenv("AI_MODEL_PROVIDER", raising=False)
+    monkeypatch.delenv("OLLAMA_MODEL_ID", raising=False)
     monkeypatch.setattr(agent, "OllamaModel", FakeOllamaModel)
 
     agent.create_model()
 
     assert captured == {
         "host": "http://localhost:11434",
-        "model_id": "qwen3:4b",
+        "model_id": "qwen3.5:9b",
         "additional_args": {"think": False},
     }
 
