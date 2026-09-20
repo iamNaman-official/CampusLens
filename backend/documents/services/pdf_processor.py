@@ -5,7 +5,7 @@ class PDFProcessingError(Exception):
     """Raised when a PDF cannot be processed."""
 
 
-def extract_pdf_content(file_path):
+def extract_pdf_content(file_source):
     """
     Extract text from a PDF while preserving page numbers.
 
@@ -14,7 +14,7 @@ def extract_pdf_content(file_path):
     """
 
     try:
-        reader = PdfReader(file_path)
+        reader = PdfReader(file_source)
     except Exception as exc:
         raise PDFProcessingError(
             f"Unable to read PDF: {exc}"

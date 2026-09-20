@@ -25,19 +25,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
+def env_flag(name: str, default: bool = False) -> bool:
+    """Read a boolean environment variable without accepting secrets in code."""
+
+    return os.getenv(name, str(default)).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 # =============================================================================
 # SECURITY
 # =============================================================================
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+DEBUG = env_flag("DEBUG")
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("ALLOWED_HOSTS", "").split(",")
     if host.strip()
 ]
+
+if not DEBUG and not SECRET_KEY:
+    raise ValueError("SECRET_KEY must be set when DEBUG is False.")
 
 
 # =============================================================================
@@ -142,8 +156,21 @@ REST_FRAMEWORK = {
 # =============================================================================
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        (
+            "http://localhost:3000,http://127.0.0.1:3000,"
+            "http://localhost:5173,http://127.0.0.1:5173"
+        ),
+    ).split(",")
+    if origin.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
 
 
@@ -151,12 +178,29 @@ CORS_ALLOWED_ORIGINS = [
 # DATABASE
 # =============================================================================
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+if env_flag("USE_POSTGRES"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("POSTGRES_DB"),
+            "USER": os.getenv("POSTGRES_USER"),
+            "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+            "HOST": os.getenv("POSTGRES_HOST"),
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "sslmode": os.getenv("POSTGRES_SSLMODE", "require"),
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # =============================================================================
@@ -209,6 +253,7 @@ USE_TZ = True
 # =============================================================================
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 # =============================================================================
@@ -219,12 +264,42 @@ MEDIA_URL = "/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 
+if env_flag("USE_S3"):
+    # boto3 obtains credentials through the standard provider chain locally
+    # and through the ECS task role in production. Do not configure keys here.
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": os.getenv("AWS_STORAGE_BUCKET_NAME"),
+                "region_name": os.getenv("AWS_S3_REGION_NAME", "ap-south-1"),
+                "file_overwrite": False,
+                "default_acl": None,
+                "querystring_auth": True,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
 
 # =============================================================================
 # AWS
 # =============================================================================
 
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", AWS_REGION)
+
+if not DEBUG:
+    # Enable this explicitly at the HTTPS reverse proxy. Keeping the default
+    # false prevents test and one-off management commands from being forced
+    # to redirect before their deployment environment is configured.
+    SECURE_SSL_REDIRECT = env_flag("SECURE_SSL_REDIRECT")
+    SESSION_COOKIE_SECURE = SECURE_SSL_REDIRECT
+    CSRF_COOKIE_SECURE = SECURE_SSL_REDIRECT
+    if SECURE_SSL_REDIRECT:
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # =============================================================================
@@ -247,6 +322,17 @@ DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     "noreply@campuslens.local",
 )
+
+# SMTP is optional for a local Build It demo. The console backend remains the
+# default, so the project works without a mail-provider account. Configure a
+# provider only in the ignored backend/.env file; never commit its password.
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_flag("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = env_flag("EMAIL_USE_SSL")
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "15"))
 
 # =============================================================================
 # LOGGING

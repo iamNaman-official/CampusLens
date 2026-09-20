@@ -1,4 +1,7 @@
+import os
+
 from strands import Agent
+from strands.models import BedrockModel
 from strands.models.ollama import OllamaModel
 
 from documents.agent.tools import search_document
@@ -41,15 +44,46 @@ Rules:
 """
 
 
-def create_agent() -> Agent:
-    """
-    Create the local CampusLens Strands agent.
-    """
+def create_model():
+    """Select a model provider without changing the agent's behavior."""
 
-    model = OllamaModel(
-        host="http://localhost:11434",
-        model_id="qwen3.5:9b",
+    provider = os.getenv("AI_MODEL_PROVIDER", "ollama").strip().lower()
+
+    if provider == "bedrock":
+        return BedrockModel(
+            # Nova on-demand calls in ap-south-1 require this cross-region
+            # inference profile rather than the base foundation-model ID.
+            model_id=os.getenv(
+                "BEDROCK_MODEL_ID",
+                "apac.amazon.nova-lite-v1:0",
+            ),
+            region_name=os.getenv("BEDROCK_REGION", "ap-south-1"),
+            temperature=0.1,
+        )
+
+    if provider != "ollama":
+        raise ValueError(
+            "AI_MODEL_PROVIDER must be either 'ollama' or 'bedrock'."
+        )
+
+    think = os.getenv("OLLAMA_THINK", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+    return OllamaModel(
+        host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+        model_id=os.getenv("OLLAMA_MODEL_ID", "qwen3:4b"),
+        additional_args={"think": think},
     )
+
+
+def create_agent() -> Agent:
+    """Create the CampusLens Strands agent for local or AWS inference."""
+
+    model = create_model()
 
     return Agent(
         model=model,

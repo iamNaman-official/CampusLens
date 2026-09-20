@@ -2,6 +2,14 @@
 
 > AI-powered document understanding for students.
 
+## Hackathon Build It demo
+
+CampusLens has an implemented local Build It workflow using the Strands Agents
+SDK and Ollama. See [the Build It submission guide](docs/BUILD_IT_SUBMISSION.md)
+for the exact local architecture, demo steps, and an honest submission
+checklist. Cloud deployment configuration in this repository is future work and
+must not be represented as deployed functionality.
+
 CampusLens is an AI-powered document understanding system designed to help students deal with confusing college documents such as:
 
 - College circulars

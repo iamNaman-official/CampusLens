@@ -10,6 +10,7 @@ click==8.5.0
 cryptography==50.0.1
 Django==6.1.1
 django-cors-headers==4.9.0
+django-storages[s3]==1.14.6
 django-stubs==6.1.1
 django-stubs-ext==6.1.1
 djangorestframework==3.18.1
@@ -18,6 +19,7 @@ djangorestframework_simplejwt==5.5.1
 docstring_parser==0.18.0
 dotenv==0.9.9
 h11==0.16.0
+gunicorn==23.0.0
 httpcore==1.0.9
 httpcore2==2.13.0
 httpx==0.28.1
@@ -43,6 +45,7 @@ pydantic_core==2.46.5
 Pygments==2.21.0
 PyJWT==2.14.0
 pypdf==6.19.0
+psycopg[binary]==3.3.2
 pytest==9.1.1
 pytest-django==4.14.0
 python-dateutil==2.9.0.post0

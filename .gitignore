@@ -245,3 +245,7 @@ htmlcov/
 
 # User uploaded media
 media/*
+
+# Frontend build dependencies
+frontend/node_modules/
+frontend/dist/

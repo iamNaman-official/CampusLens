@@ -58,9 +58,14 @@ def process_document(document):
         # 2. Extract PDF content
         # -----------------------------------------------------
 
-        pages = extract_pdf_content(
-            document.file.path,
-        )
+        # Storage backends such as S3 do not expose a local ``.path``.
+        # Read through Django's storage abstraction so this works for local
+        # development media and private S3 objects alike.
+        document.file.open("rb")
+        try:
+            pages = extract_pdf_content(document.file)
+        finally:
+            document.file.close()
 
         # -----------------------------------------------------
         # 3. Save pages and chunks
