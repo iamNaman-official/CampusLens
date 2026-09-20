@@ -236,7 +236,15 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # EMAIL
 # =============================================================================
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = os.getenv(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
+)
+
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "noreply@campuslens.local",
+)
 
 # =============================================================================
 # LOGGING

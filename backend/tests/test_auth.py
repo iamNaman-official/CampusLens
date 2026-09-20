@@ -1,6 +1,8 @@
 import pytest
-from django.contrib.auth.models import User
 from rest_framework.test import APIClient
+
+from accounts.models import UserProfile
+from django.contrib.auth.models import User
 
 
 @pytest.mark.django_db
@@ -10,25 +12,30 @@ def test_register_user():
     response = client.post(
         "/api/auth/register/",
         {
-            "username": "teststudent",
-            "email": "teststudent@example.com",
+            "username": "newstudent",
+            "email": "newstudent@example.com",
             "password": "TestPassword123!",
         },
         format="json",
     )
 
     assert response.status_code == 201
-    assert User.objects.filter(
-        username="teststudent"
-    ).exists()
+    assert response.data["user"]["username"] == "newstudent"
+    assert response.data["user"]["email"] == "newstudent@example.com"
+    assert response.data["email_verified"] is False
 
 
 @pytest.mark.django_db
 def test_login_user():
-    User.objects.create_user(
+    user = User.objects.create_user(
         username="teststudent",
         email="teststudent@example.com",
         password="TestPassword123!",
+    )
+
+    UserProfile.objects.create(
+        user=user,
+        email_verified=True,
     )
 
     client = APIClient()
@@ -48,9 +55,30 @@ def test_login_user():
 
 
 @pytest.mark.django_db
-def test_protected_endpoint_requires_authentication():
+def test_login_unverified_user():
+    user = User.objects.create_user(
+        username="unverified",
+        email="unverified@example.com",
+        password="TestPassword123!",
+    )
+
+    UserProfile.objects.create(
+        user=user,
+        email_verified=False,
+    )
+
     client = APIClient()
 
-    response = client.get("/api/documents/")
+    response = client.post(
+        "/api/auth/token/",
+        {
+            "username": "unverified",
+            "password": "TestPassword123!",
+        },
+        format="json",
+    )
 
-    assert response.status_code == 401
+    assert response.status_code == 400
+    assert response.data["non_field_errors"] == [
+        "Please verify your email before logging in."
+    ]
