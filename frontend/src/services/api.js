@@ -5,6 +5,16 @@ const ACCESS_TOKEN_KEY = 'campuslens.accessToken'
 const REFRESH_TOKEN_KEY = 'campuslens.refreshToken'
 let refreshInFlight = null
 
+export class ApiError extends Error {
+  constructor(message, { status, payload } = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.payload = payload
+    this.retryAfter = Number(payload?.retry_after) || null
+  }
+}
+
 export function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
@@ -64,7 +74,10 @@ async function request(path, options = {}, retryAfterRefresh = true) {
         throw refreshError
       }
     }
-    throw new Error(messageFrom(payload, 'CampusLens could not complete that request.'))
+    throw new ApiError(messageFrom(payload, 'CampusLens could not complete that request.'), {
+      status: response.status,
+      payload,
+    })
   }
   return payload
 }
@@ -89,6 +102,38 @@ export async function register({ username, email, password }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, email, password }),
+  })
+}
+
+export function verifyOtp(email, otp) {
+  return request('/auth/otp/verify/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp }),
+  })
+}
+
+export function resendOtp(email) {
+  return request('/auth/otp/resend/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function requestPasswordReset(email) {
+  return request('/auth/password/reset/request/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function confirmPasswordReset(email, otp, password) {
+  return request('/auth/password/reset/confirm/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp, password }),
   })
 }
 
@@ -137,6 +182,10 @@ export function getChat(id) {
 
 export function deleteChat(id) {
   return request(`/chats/${id}/`, { method: 'DELETE' })
+}
+
+export function deleteChatMessage(id) {
+  return request(`/messages/${id}/`, { method: 'DELETE' })
 }
 
 export function getChatMessages(id) {

@@ -10,6 +10,7 @@ import Profile from './pages/Profile'
 import { clearSession, deleteDocument as deleteFromBackend, getAccessToken, getCurrentUser, getDocuments, uploadDocument as uploadToBackend } from './services/api'
 
 const colors = ['lime', 'sand', 'coral']
+const ACTIVE_DOCUMENT_KEY = 'campuslens.activeDocumentId'
 function displayDocument(document, index = 0) {
   return {
     ...document,
@@ -41,12 +42,18 @@ function App() {
     localStorage.setItem('campuslens-theme', nextTheme)
   }
 
+  function selectDocument(document) {
+    setActiveDocument(document)
+    if (document?.id) localStorage.setItem(ACTIVE_DOCUMENT_KEY, String(document.id))
+  }
+
   async function loadAccount() {
     const [account, savedDocuments] = await Promise.all([getCurrentUser(), getDocuments()])
     const formattedDocuments = savedDocuments.map(displayDocument)
     setUser(account)
     setDocuments(formattedDocuments)
-    setActiveDocument(current => current || formattedDocuments[0] || null)
+    const savedDocumentId = Number(localStorage.getItem(ACTIVE_DOCUMENT_KEY))
+    setActiveDocument(current => current || formattedDocuments.find(document => document.id === savedDocumentId) || formattedDocuments[0] || null)
   }
 
   useEffect(() => {
@@ -75,7 +82,7 @@ function App() {
     try {
       const document = displayDocument(await uploadToBackend(file))
       setDocuments(items => [document, ...items])
-      setActiveDocument(document)
+      selectDocument(document)
       if (!stayOnDashboard) setPage('documents')
       return document
     } catch (error) {
@@ -87,7 +94,7 @@ function App() {
   }
 
   function openChat(document, prompt = '') {
-    setActiveDocument(document)
+    selectDocument(document)
     setChatPrompt(prompt)
     setPage('chat')
   }
@@ -98,6 +105,7 @@ function App() {
       await deleteFromBackend(document.id)
       setDocuments(items => items.filter(item => item.id !== document.id))
       setActiveDocument(current => current?.id === document.id ? null : current)
+      if (String(document.id) === localStorage.getItem(ACTIVE_DOCUMENT_KEY)) localStorage.removeItem(ACTIVE_DOCUMENT_KEY)
     } catch (error) {
       setDocumentError(error.message)
       throw error
@@ -112,7 +120,7 @@ function App() {
       ? <Profile user={user} theme={theme} onThemeChange={changeTheme} />
       : page === 'kanban'
         ? <Kanban documents={documents} onAskAi={openChat} />
-        : <Chat activeDocument={activeDocument} documents={documents} onSelectDocument={setActiveDocument} initialPrompt={chatPrompt} onPromptUsed={() => setChatPrompt('')} />
+        : <Chat activeDocument={activeDocument} documents={documents} onSelectDocument={selectDocument} initialPrompt={chatPrompt} onPromptUsed={() => setChatPrompt('')} />
 
   return <>
     {page === 'home'

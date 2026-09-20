@@ -8,10 +8,13 @@ const themes = [
   ['turquoise', 'Turquoise', '#123e43', '#67e5df'],
   ['navy', 'Navy cyan', '#173650', '#92e6ed'],
   ['burgundy', 'Burgundy peach', '#5b2831', '#ffc7a5'],
-  ['ocean', 'Blue gold', '#1f3b67', '#f6d365'],
   ['mint', 'Forest mint', '#25483a', '#a8ebc5'],
   ['cocoa', 'Brown cream', '#4a3429', '#f3dfbd'],
-  ['slate', 'Slate green', '#263539', '#b6ed89'],
+  ['lavender', 'Lavender dusk', '#33254f', '#c8b6ff'],
+  ['sunset', 'Sunset ember', '#4b241f', '#ff9f7f'],
+  ['sapphire', 'Sapphire glow', '#102d5a', '#79b8ff'],
+  ['amber', 'Amber grove', '#5a4520', '#ffd56a'],
+  ['black', 'Black studio', '#111111', '#f5f5f0'],
 ]
 
 function Profile({ user, theme = 'lime', onThemeChange }) {
@@ -48,6 +51,10 @@ function Profile({ user, theme = 'lime', onThemeChange }) {
     setFlow('password-success')
     setNotice('Password reset is ready to submit when the backend supports OTP password recovery.')
   }
+  function selectTheme(event, id) {
+    onThemeChange?.(id)
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) animate(event.currentTarget, { scale: [1, 1.06, 1], duration: 360, ease: 'outElastic(1, .55)' })
+  }
 
   return (
     <div className="dashboard-light min-h-screen px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
@@ -75,7 +82,7 @@ function Profile({ user, theme = 'lime', onThemeChange }) {
 
         <section className="dashboard-side-card mt-6 rounded-[28px] p-6">
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#c6d8b7]">Personalise your app</p><h2 className="display-font mt-1 text-2xl font-bold text-[#f8f1dc]">Authenticated theme</h2><p className="mt-2 text-sm text-[#c7d2c2]">This preference changes only the signed-in workspace—not the public landing page.</p>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{themes.map(([id, name, base, accent]) => <button key={id} onClick={() => onThemeChange?.(id)} className={`rounded-xl border p-3 text-left transition ${theme === id ? 'border-[#d7f46d] ring-2 ring-[#d7f46d]/50' : 'border-[#718b69] hover:border-[#d7f46d]'}`}><span className="mb-2 block h-7 rounded-lg" style={{ background: `linear-gradient(135deg, ${base} 0 65%, ${accent} 65%)` }} /><span className="text-xs font-bold text-[#edf4e6]">{name}</span></button>)}</div>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{themes.map(([id, name, base, accent]) => <button key={id} onClick={(event) => selectTheme(event, id)} className={`rounded-xl border p-3 text-left transition ${theme === id ? 'border-[#d7f46d] ring-2 ring-[#d7f46d]/50' : 'border-[#718b69] hover:border-[#d7f46d]'}`}><span className="mb-2 block h-7 rounded-lg" style={{ background: `linear-gradient(135deg, ${base} 0 65%, ${accent} 65%)` }} /><span className="text-xs font-bold text-[#edf4e6]">{name}</span></button>)}</div>
         </section>
         {notice && <p className="mt-5 rounded-xl border border-[#8fa882] bg-[#203a24] px-4 py-3 text-sm text-[#e6f4ce]">{notice}</p>}
       </div>

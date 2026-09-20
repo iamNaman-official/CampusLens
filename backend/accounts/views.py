@@ -2,11 +2,14 @@ from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import (
     EmailVerifiedTokenObtainPairSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     RegisterSerializer,
     ResendOTPSerializer,
     UserSerializer,
@@ -16,6 +19,10 @@ from .services.email_otp import (
     resend_email_otp,
     send_email_otp,
     verify_email_otp,
+)
+from .services.password_reset import (
+    confirm_password_reset,
+    request_password_reset,
 )
 
 
@@ -189,3 +196,40 @@ class MeView(APIView):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        success, message, retry_after = request_password_reset(
+            serializer.validated_data["email"],
+        )
+        if not success:
+            return Response(
+                {"detail": message, "retry_after": retry_after},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        return Response({"detail": message})
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "password_reset"
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        success, message = confirm_password_reset(
+            serializer.validated_data["email"],
+            serializer.validated_data["otp"],
+            serializer.validated_data["password"],
+        )
+        if not success:
+            return Response({"detail": message}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": message})

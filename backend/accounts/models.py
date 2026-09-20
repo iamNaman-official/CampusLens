@@ -59,3 +59,28 @@ class EmailOTP(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.username}"
+
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="password_reset_otps",
+    )
+    otp_hash = models.CharField(max_length=64)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @staticmethod
+    def hash_otp(otp):
+        return EmailOTP.hash_otp(otp)
+
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    def can_resend(self):
+        return (timezone.now() - self.created_at).total_seconds() >= 60
+
+    def resend_available_in(self):
+        return max(0, int(60 - (timezone.now() - self.created_at).total_seconds()))

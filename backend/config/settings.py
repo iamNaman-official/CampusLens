@@ -130,6 +130,9 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "5/minute",
         "user": "60/minute",
+        # Reset confirmation needs enough attempts for its OTP lockout to
+        # return the intended response, while remaining rate limited.
+        "password_reset": "10/minute",
     },
 }
 

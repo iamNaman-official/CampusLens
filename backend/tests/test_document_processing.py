@@ -181,3 +181,35 @@ def test_process_document_marks_failed_on_pdf_error(
     document.refresh_from_db()
 
     assert document.status == Document.Status.FAILED
+
+
+@pytest.mark.django_db
+def test_process_document_keeps_pdf_when_ai_is_unavailable(monkeypatch):
+    user = User.objects.create_user(
+        username="student",
+        password="TestPassword123!",
+    )
+    document = Document.objects.create(
+        user=user,
+        title="Campus Notice",
+        file=SimpleUploadedFile(
+            "notice.pdf",
+            b"fake pdf content",
+            content_type="application/pdf",
+        ),
+    )
+    monkeypatch.setattr(
+        "documents.services.document_processor.extract_pdf_content",
+        lambda _: [{"page_number": 1, "text": "Campus notice"}],
+    )
+    monkeypatch.setattr(
+        "documents.services.document_processor.generate_document_intelligence",
+        lambda _: (_ for _ in ()).throw(ConnectionError("Ollama is offline")),
+    )
+
+    process_document(document)
+
+    document.refresh_from_db()
+    assert document.status == Document.Status.FAILED
+    assert DocumentPage.objects.filter(document=document).count() == 1
+    assert Deadline.objects.filter(document=document).count() == 0

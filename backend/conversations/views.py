@@ -219,3 +219,19 @@ class ChatMessageListView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class MessageDetailView(APIView):
+    def delete(self, request, pk):
+        try:
+            message = Message.objects.select_related("chat").get(
+                pk=pk,
+                chat__user=request.user,
+            )
+        except Message.DoesNotExist:
+            return Response(
+                {"detail": "Message not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        message.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
