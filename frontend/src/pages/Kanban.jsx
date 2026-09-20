@@ -20,9 +20,18 @@ function Kanban({ documents, onAskAi }) {
   const [preferences, setPreferences] = useState(loadPreferences)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [sort, setSort] = useState('document')
+  const [openMenu, setOpenMenu] = useState(null)
   const boardRef = useRef(null)
+  const menuRef = useRef(null)
 
   useEffect(() => { localStorage.setItem(STORE_KEY, JSON.stringify(preferences)) }, [preferences])
+  useEffect(() => {
+    if (!openMenu || !menuRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+    const animation = animate(menuRef.current, { opacity: [0, 1], translateY: [-7, 0], scale: [.96, 1], duration: 240, ease: 'outExpo' })
+    return () => animation.revert()
+  }, [openMenu])
   useEffect(() => {
     if (!boardRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
     const cards = boardRef.current.querySelectorAll('.kanban-card')
@@ -51,15 +60,16 @@ function Kanban({ documents, onAskAi }) {
     return () => { cancelled = true }
   }, [documents, preferences])
 
+  const displayedItems = useMemo(() => items.filter(item => filter === 'all' || item.kind === filter).sort((left, right) => sort === 'type' ? left.kind.localeCompare(right.kind) : sort === 'title' ? left.title.localeCompare(right.title) : left.document.title.localeCompare(right.document.title)), [items, filter, sort])
   const grouped = useMemo(() => lanes.reduce((all, [key]) => {
-    all[key] = items.filter((item) => {
+    all[key] = displayedItems.filter((item) => {
       const state = preferences[item.id] || {}
       if (state.priority) return key === 'priority'
       if (state.starred) return key === 'saved'
       return key === (item.kind === 'Action' ? 'actions' : 'upcoming')
     })
     return all
-  }, {}), [items, preferences])
+  }, {}), [displayedItems, preferences])
 
   function update(item, patch) {
     setPreferences((current) => ({ ...current, [item.id]: { ...current[item.id], ...patch } }))
@@ -68,9 +78,18 @@ function Kanban({ documents, onAskAi }) {
     const prompt = 'Help me with this ' + item.kind.toLowerCase() + ': ' + item.title + (item.date ? ' (date: ' + item.date + ').' : '.')
     onAskAi(item.document, prompt)
   }
+  function choose(kind, value) {
+    if (kind === 'filter') setFilter(value)
+    else setSort(value)
+    setOpenMenu(null)
+  }
+  const filterOptions = [['all', 'All items'], ['Deadline', 'Deadlines'], ['Important date', 'Important dates'], ['Action', 'Actions']]
+  const sortOptions = [['document', 'Document'], ['title', 'Title'], ['type', 'Type']]
+  const selectedLabel = (options, value) => options.find(([id]) => id === value)?.[1] || value
 
-  return <div className="dashboard-light min-h-screen px-5 py-8 sm:px-8 lg:px-10 lg:py-10"><div className="mx-auto max-w-7xl">
+  return <div className="dashboard-light kanban-page min-h-screen px-5 py-8 sm:px-8 lg:px-10 lg:py-10"><div className="mx-auto max-w-7xl">
     <header className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase tracking-[.17em] text-[#5c7c45]">From your processed documents</p><h1 className="editorial-font mt-2 text-4xl tracking-[-.055em] text-[#1b3a25] sm:text-5xl">Kanban board</h1><p className="mt-3 max-w-xl text-sm leading-6 text-[#5d7160]">Keep deadlines, important dates, and actions in one focused study plan.</p></div><p className="rounded-full border border-[#b8cba7] bg-[#f8f7eb] px-3 py-2 text-xs font-bold text-[#587156]">{items.length} extracted item{items.length === 1 ? '' : 's'}</p></header>
+    <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-[#b8cba7] bg-[#f7f7ed] p-3"><div className="relative"><span className="mr-2 text-xs font-bold text-[#466c36]">Show</span><button onClick={() => setOpenMenu(openMenu === 'filter' ? null : 'filter')} className="inline-flex min-w-36 items-center justify-between gap-4 rounded-xl border border-[#a7c48c] bg-white px-3 py-2 text-sm font-bold text-[#29442f] shadow-sm transition hover:border-[#6f9d54] hover:shadow"><span>{selectedLabel(filterOptions, filter)}</span><span className={`text-[#557b42] transition ${openMenu === 'filter' ? 'rotate-180' : ''}`}>⌄</span></button>{openMenu === 'filter' && <div ref={menuRef} className="absolute left-0 top-11 z-20 min-w-48 overflow-hidden rounded-xl border border-[#a7c48c] bg-[#fffdf4] p-1.5 shadow-xl">{filterOptions.map(([value, label]) => <button key={value} onClick={() => choose('filter', value)} className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${filter === value ? 'bg-[#d7f46d] text-[#19311e]' : 'text-[#36533b] hover:bg-[#edf3e4]'}`}>{label}</button>)}</div>}</div><div className="relative"><span className="mr-2 text-xs font-bold text-[#466c36]">Sort</span><button onClick={() => setOpenMenu(openMenu === 'sort' ? null : 'sort')} className="inline-flex min-w-32 items-center justify-between gap-4 rounded-xl border border-[#a7c48c] bg-white px-3 py-2 text-sm font-bold text-[#29442f] shadow-sm transition hover:border-[#6f9d54] hover:shadow"><span>{selectedLabel(sortOptions, sort)}</span><span className={`text-[#557b42] transition ${openMenu === 'sort' ? 'rotate-180' : ''}`}>⌄</span></button>{openMenu === 'sort' && <div ref={menuRef} className="absolute left-0 top-11 z-20 min-w-40 overflow-hidden rounded-xl border border-[#a7c48c] bg-[#fffdf4] p-1.5 shadow-xl">{sortOptions.map(([value, label]) => <button key={value} onClick={() => choose('sort', value)} className={`block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition ${sort === value ? 'bg-[#d7f46d] text-[#19311e]' : 'text-[#36533b] hover:bg-[#edf3e4]'}`}>{label}</button>)}</div>}</div><button onClick={() => setPreferences({})} disabled={!Object.keys(preferences).length} className="ml-auto rounded-xl border border-[#d7b19e] px-3 py-2 text-xs font-bold text-[#92503b] transition hover:bg-[#fff0e9] disabled:opacity-45">Reset board changes</button></div>
     {loading && <p className="mt-7 text-sm font-semibold text-[#587156]">Collecting insights from your documents…</p>}
     {error && <p className="mt-7 rounded-xl border border-[#e9b09c] bg-[#fff0e9] p-4 text-sm text-[#9b4e3b]">{error}</p>}
     {!loading && !error && !items.length && <div className="mt-7 rounded-[26px] border border-dashed border-[#b9cda4] bg-[#f7f7ed] p-8 text-center text-sm leading-6 text-[#607560]">Upload and process a campus document to automatically add its deadlines, important dates, and actions here.</div>}
